@@ -21,23 +21,7 @@ internal class MyGLSurfaceView(context: Context?) : GLSurfaceView(context) {
             Log.w("JAMIE", "MyGLSurfaceView.onSurfaceCreated()")
 
             for (name in shaders.keys) {
-                Log.w("JAMIE", "Compiling shader $name")
-                val shader = shaders[name]!!
-                val prog = GLES20.glCreateProgram()
-
-                val vert = GLES20.glCreateShader(GLES20.GL_VERTEX_SHADER)
-                GLES20.glShaderSource(vert, shader.first)
-                GLES20.glCompileShader(vert)
-
-                val frag = GLES20.glCreateShader(GLES20.GL_FRAGMENT_SHADER)
-                GLES20.glShaderSource(frag, shader.second)
-                GLES20.glCompileShader(frag)
-
-                GLES20.glAttachShader(prog, vert)
-                GLES20.glAttachShader(prog, frag)
-
-                Log.w("JAMIE", "Linking shader $name")
-                GLES20.glLinkProgram(prog)
+                Gecko().compile_shader(name!!, shaders[name]?.first!!, shaders[name]?.second!!)
             }
         }
 
