@@ -1,4 +1,4 @@
-package me.jamienicol.AdrenoLinkProgramCrasher
+package me.jamienicol.adrenolinkprogramcrasher
 
 import org.junit.Test
 
