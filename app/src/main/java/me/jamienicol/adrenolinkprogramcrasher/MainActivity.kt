@@ -13,6 +13,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        Gecko().init();
+
         Log.w("JAMIE", "Adding delayed callback")
         val handler = Handler(Looper.getMainLooper())
         handler.postDelayed(Runnable {
