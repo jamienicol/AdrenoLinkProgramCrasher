@@ -20,9 +20,7 @@ class MainActivity : AppCompatActivity() {
         handler.postDelayed(Runnable {
             Log.w("JAMIE", "Running delayed callback")
             val container = findViewById<View>(R.id.main) as ViewGroup
-            for (i in 1..5) {
-                container.addView(MyGLSurfaceView(this@MainActivity))
-            }
+            container.addView(MyGLSurfaceView(this@MainActivity))
         }, 100)
 
     }
