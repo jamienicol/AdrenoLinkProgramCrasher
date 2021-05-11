@@ -7,5 +7,7 @@ class Gecko {
 
     external fun init()
 
+    external fun unmap();
+
     external fun compile_shader(name: String, vertSrc: String, fragSrc: String)
 }

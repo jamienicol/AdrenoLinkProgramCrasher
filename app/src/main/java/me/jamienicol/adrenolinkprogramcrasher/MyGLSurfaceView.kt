@@ -20,6 +20,8 @@ internal class MyGLSurfaceView(context: Context?) : GLSurfaceView(context) {
         override fun onSurfaceCreated(unused: GL10, config: EGLConfig) {
             Log.w("JAMIE", "MyGLSurfaceView.onSurfaceCreated()")
 
+            Gecko().unmap()
+
             val shaderList = listOf(
                 "debug_font_Gles",
                 "brush_mix_blend_ALPHA_PASS_Gles",

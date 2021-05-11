@@ -3,14 +3,20 @@
 #include <sys/mman.h>
 #include <errno.h>
 #include <GLES2/gl2.h>
+#include <vector>
+
+const size_t num_maps = 1000;
+const size_t map_len = 1024 * 1024;
+static std::vector<void*> maps;
 
 extern "C" void Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_init(JNIEnv *env, jobject thiz) {
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Gecko init()");
 
-    for (int i = 0; i < 1000; i++) {
+    maps.reserve(num_maps);
+    for (int i = 0; i < num_maps; i++) {
         size_t map_len = 1024 * 1024;
         __android_log_print(ANDROID_LOG_INFO, "JAMIE",
-                            "mmapping %zu bytes", map_len);
+                            "%d mmapping %zu bytes", i, map_len);
         void *map = mmap(0, map_len, PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
         if (map == MAP_FAILED) {
             __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "mmap failed: %d\n",
@@ -20,9 +26,21 @@ extern "C" void Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_init(JNIEnv *e
             __android_log_print(ANDROID_LOG_INFO, "JAMIE",
                                 "mmap succeeded: 0x%zx - 0x%zx\n", (size_t) map,
                                 (size_t) map + map_len);
+            maps.push_back(map);
         }
     }
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_unmap(JNIEnv *env, jobject thiz) {
+    for (int i = 0; i < maps.size(); i++) {
+        __android_log_print(ANDROID_LOG_INFO, "JAMIE",
+                            "%d munmapping %zu bytes", i, map_len);
+        munmap(maps[i], map_len);
+    }
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_compile_1shader(JNIEnv *env, jobject thiz,
