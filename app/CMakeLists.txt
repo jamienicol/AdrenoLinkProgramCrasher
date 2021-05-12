@@ -4,5 +4,6 @@ add_library(geckojni SHARED
   src/main/cpp/gecko.cpp)
 
 target_link_libraries(geckojni
+  EGL
   GLESv2
   log)
