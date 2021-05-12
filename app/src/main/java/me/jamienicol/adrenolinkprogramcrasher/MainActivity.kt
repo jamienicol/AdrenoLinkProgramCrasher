@@ -17,33 +17,38 @@ class MainActivity : AppCompatActivity() {
         Log.i("JAMIE", "Loading shaders from resources")
         loadShaders()
 
-        Log.i("JAMIE", "Mapping omnijar")
-        Gecko().map_omnijar()
+        val vertSources = shaders.values.map { it.first!! }.toTypedArray()
+        val fragSources = shaders.values.map { it.second!! }.toTypedArray()
 
-        Log.i("JAMIE", "Initializing EGL Context")
-        Gecko().init_egl(1080, 1776)
+        Gecko().run_native(shaderList, vertSources, fragSources)
 
-        // Log.i("JAMIE", "Unmapping omnijar")
-        // Gecko().unmap_omnijar()
-
-        Log.i("JAMIE", "Creating Render thread")
-        val renderThread = Thread {
-            Log.i("JAMIE", "Running Render thread")
-
-            Gecko().make_current()
-
-            Log.i("JAMIE", "Compiling shaders")
-            for (name in shaderList) {
-                Gecko().compile_shader(
-                    name,
-                    shaders[name]!!.first!!,
-                    shaders[name]!!.second!!,
-                )
-            }
-            Log.i("JAMIE", "Finished compiling shaders")
-        }
-
-        renderThread.start()
+//        Log.i("JAMIE", "Mapping omnijar")
+//        Gecko().map_omnijar()
+//
+//        Log.i("JAMIE", "Initializing EGL Context")
+//        Gecko().init_egl(1080, 1776)
+//
+//        // Log.i("JAMIE", "Unmapping omnijar")
+//        // Gecko().unmap_omnijar()
+//
+//        Log.i("JAMIE", "Creating Render thread")
+//        val renderThread = Thread {
+//            Log.i("JAMIE", "Running Render thread")
+//
+//            Gecko().make_current()
+//
+//            Log.i("JAMIE", "Compiling shaders")
+//            for (name in shaderList) {
+//                Gecko().compile_shader(
+//                    name,
+//                    shaders[name]!!.first!!,
+//                    shaders[name]!!.second!!,
+//                )
+//            }
+//            Log.i("JAMIE", "Finished compiling shaders")
+//        }
+//
+//        renderThread.start()
     }
 
     private fun loadShaders() {
@@ -75,7 +80,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    val shaderList = listOf(
+    val shaderList = arrayOf(
         "debug_font_Gles",
         "brush_mix_blend_ALPHA_PASS_Gles",
         "composite_TEXTURE_EXTERNAL_Gles",

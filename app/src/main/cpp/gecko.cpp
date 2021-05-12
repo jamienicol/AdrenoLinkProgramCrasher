@@ -5,6 +5,7 @@
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 #include <vector>
+#include <thread>
 
 const size_t num_maps = 1000;
 const size_t map_len = 1024 * 1024;
@@ -169,4 +170,60 @@ Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_compile_1shader(JNIEnv *env, j
     env->ReleaseStringUTFChars(name, name_cstr);
     env->ReleaseStringUTFChars(vert_src, vert_src_cstr);
     env->ReleaseStringUTFChars(frag_src, frag_src_cstr);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_run_1native(JNIEnv *env, jobject thiz, jobjectArray shaderNames, jobjectArray vertSources, jobjectArray fragSources) {
+
+    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Copying objects from JNI");
+    struct Shader {
+        const char* name;
+        const char* vert_src;
+        const char* frag_src;
+    };
+    std::vector<Shader> shaders;
+
+    jsize num_shaders = env->GetArrayLength(shaderNames);
+
+    shaders.reserve(num_shaders);
+    for (int i = 0; i < num_shaders; i++) {
+        shaders.push_back(Shader {
+            env->GetStringUTFChars((jstring)env->GetObjectArrayElement(shaderNames, i), 0),
+            env->GetStringUTFChars((jstring)env->GetObjectArrayElement(vertSources, i), 0),
+            env->GetStringUTFChars((jstring)env->GetObjectArrayElement(fragSources, i), 0),
+        });
+    }
+
+    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Mapping omnijar");
+    map_omnijar();
+
+    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Initializing EGL Context");
+    init_egl(1080, 1776);
+
+    // Unmapping here (before creating the render thread) prevents the crash.
+    // __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Unmapping omnijar");
+    // unmap_omnijar();
+
+    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Creating Render thread");
+    std::thread thread([&shaders]() {
+        __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Running Render thread");
+
+        make_current();
+
+        __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Compiling shaders");
+        for (const auto& shader: shaders) {
+            compile_shader(shader.name, shader.vert_src, shader.frag_src);
+        }
+        __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Finished compiling shaders");
+    });
+
+    thread.join();
+
+    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Cleaning up JNI objects");
+    for (int i = 0; i < num_shaders; i++) {
+        env->ReleaseStringUTFChars((jstring)env->GetObjectArrayElement(shaderNames, i), shaders[i].name);
+        env->ReleaseStringUTFChars((jstring)env->GetObjectArrayElement(vertSources, i), shaders[i].vert_src);
+        env->ReleaseStringUTFChars((jstring)env->GetObjectArrayElement(fragSources, i), shaders[i].frag_src);
+    }
 }

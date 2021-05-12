@@ -14,4 +14,6 @@ class Gecko {
     external fun make_current()
 
     external fun compile_shader(name: String, vertSrc: String, fragSrc: String)
+
+    external fun run_native(shaderNames: Array<String>, vertSources: Array<String>, fragSources: Array<String>)
 }
