@@ -20,16 +20,17 @@ class MainActivity : AppCompatActivity() {
         Log.i("JAMIE", "Mapping omnijar")
         Gecko().map_omnijar()
 
+        Log.i("JAMIE", "Initializing EGL Context")
+        Gecko().init_egl(1080, 1776)
+
+        Log.i("JAMIE", "Unmapping omnijar")
+        Gecko().unmap_omnijar()
+
         Log.i("JAMIE", "Creating Render thread")
         val renderThread = Thread {
             Log.i("JAMIE", "Running Render thread")
 
-            Log.i("JAMIE", "Initializing EGL Context")
-            Gecko().init_egl(1080, 1776)
             Gecko().make_current()
-
-            Log.i("JAMIE", "Unmapping omnijar")
-            Gecko().unmap_omnijar()
 
             Log.i("JAMIE", "Compiling shaders")
             for (name in shaderList) {
