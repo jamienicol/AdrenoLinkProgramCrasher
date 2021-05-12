@@ -23,8 +23,8 @@ class MainActivity : AppCompatActivity() {
         Log.i("JAMIE", "Initializing EGL Context")
         Gecko().init_egl(1080, 1776)
 
-        Log.i("JAMIE", "Unmapping omnijar")
-        Gecko().unmap_omnijar()
+        // Log.i("JAMIE", "Unmapping omnijar")
+        // Gecko().unmap_omnijar()
 
         Log.i("JAMIE", "Creating Render thread")
         val renderThread = Thread {
