@@ -5,7 +5,7 @@
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 #include <vector>
-#include <thread>
+#include <pthread.h>
 
 const size_t num_maps = 1000;
 const size_t map_len = 1024 * 1024;
@@ -172,17 +172,32 @@ Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_compile_1shader(JNIEnv *env, j
     env->ReleaseStringUTFChars(frag_src, frag_src_cstr);
 }
 
+struct Shader {
+    const char* name;
+    const char* vert_src;
+    const char* frag_src;
+};
+std::vector<Shader> shaders;
+
+static void* render_thread(void* arg) {
+    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Running Render thread");
+
+    make_current();
+
+    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Compiling shaders");
+    for (const auto& shader: shaders) {
+        compile_shader(shader.name, shader.vert_src, shader.frag_src);
+    }
+    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Finished compiling shaders");
+
+    return nullptr;
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_run_1native(JNIEnv *env, jobject thiz, jobjectArray shaderNames, jobjectArray vertSources, jobjectArray fragSources) {
 
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Copying objects from JNI");
-    struct Shader {
-        const char* name;
-        const char* vert_src;
-        const char* frag_src;
-    };
-    std::vector<Shader> shaders;
 
     jsize num_shaders = env->GetArrayLength(shaderNames);
 
@@ -206,19 +221,16 @@ Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_run_1native(JNIEnv *env, jobje
     // unmap_omnijar();
 
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Creating Render thread");
-    std::thread thread([&shaders]() {
-        __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Running Render thread");
+    pthread_t thread;
+    int err = pthread_create(&thread, nullptr, render_thread, &shaders);
+    if (err) {
+        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_create: 0x%x", err);
+    }
 
-        make_current();
-
-        __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Compiling shaders");
-        for (const auto& shader: shaders) {
-            compile_shader(shader.name, shader.vert_src, shader.frag_src);
-        }
-        __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Finished compiling shaders");
-    });
-
-    thread.join();
+    err = pthread_join(thread, nullptr);
+    if (err) {
+        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_join: 0x%x", err);
+    }
 
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Cleaning up JNI objects");
     for (int i = 0; i < num_shaders; i++) {
