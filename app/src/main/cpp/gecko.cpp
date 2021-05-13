@@ -131,47 +131,6 @@ void compile_shader(const char* name, const char* vert_src, const char* frag_src
     glLinkProgram(prog);
 }
 
-extern "C"
-JNIEXPORT void JNICALL
-Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_map_1omnijar(JNIEnv *env, jobject thiz) {
-    map_omnijar();
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_unmap_1omnijar(JNIEnv *env, jobject thiz) {
-    unmap_omnijar();
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_init_1egl(JNIEnv *env, jobject thiz, jint width, jint height) {
-    init_egl(width, height);
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_make_1current(JNIEnv *env, jobject thiz) {
-    make_current();
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_compile_1shader(JNIEnv *env, jobject thiz,
-                                                                  jstring name,
-                                                                  jstring vert_src,
-                                                                  jstring frag_src) {
-    const char *name_cstr = env->GetStringUTFChars(name, 0);
-    const char *vert_src_cstr = env->GetStringUTFChars(vert_src, 0);
-    const char *frag_src_cstr = env->GetStringUTFChars(frag_src, 0);
-
-    compile_shader(name_cstr, vert_src_cstr, frag_src_cstr);
-
-    env->ReleaseStringUTFChars(name, name_cstr);
-    env->ReleaseStringUTFChars(vert_src, vert_src_cstr);
-    env->ReleaseStringUTFChars(frag_src, frag_src_cstr);
-}
-
 struct Shader {
     const char* name;
     const char* vert_src;
@@ -180,7 +139,7 @@ struct Shader {
 std::vector<Shader> shaders;
 
 static void* render_thread(void* arg) {
-    __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Running Render thread. stack addres: %p", __builtin_frame_address(0));
+    __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Running Render thread. stack address: %p", __builtin_frame_address(0));
 
     make_current();
 

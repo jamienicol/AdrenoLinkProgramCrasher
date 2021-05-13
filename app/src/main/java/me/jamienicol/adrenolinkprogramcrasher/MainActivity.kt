@@ -21,34 +21,6 @@ class MainActivity : AppCompatActivity() {
         val fragSources = shaders.values.map { it.second!! }.toTypedArray()
 
         Gecko().run_native(shaderList, vertSources, fragSources)
-
-//        Log.i("JAMIE", "Mapping omnijar")
-//        Gecko().map_omnijar()
-//
-//        Log.i("JAMIE", "Initializing EGL Context")
-//        Gecko().init_egl(1080, 1776)
-//
-//        // Log.i("JAMIE", "Unmapping omnijar")
-//        // Gecko().unmap_omnijar()
-//
-//        Log.i("JAMIE", "Creating Render thread")
-//        val renderThread = Thread {
-//            Log.i("JAMIE", "Running Render thread")
-//
-//            Gecko().make_current()
-//
-//            Log.i("JAMIE", "Compiling shaders")
-//            for (name in shaderList) {
-//                Gecko().compile_shader(
-//                    name,
-//                    shaders[name]!!.first!!,
-//                    shaders[name]!!.second!!,
-//                )
-//            }
-//            Log.i("JAMIE", "Finished compiling shaders")
-//        }
-//
-//        renderThread.start()
     }
 
     private fun loadShaders() {
