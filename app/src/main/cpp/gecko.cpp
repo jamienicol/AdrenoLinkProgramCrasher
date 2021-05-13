@@ -180,7 +180,7 @@ struct Shader {
 std::vector<Shader> shaders;
 
 static void* render_thread(void* arg) {
-    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Running Render thread");
+    __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Running Render thread. stack addres: %p", __builtin_frame_address(0));
 
     make_current();
 
@@ -221,10 +221,30 @@ Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_run_1native(JNIEnv *env, jobje
     // unmap_omnijar();
 
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Creating Render thread");
+    pthread_attr_t attr;
+    int err = pthread_attr_init(&attr);
+    if (err) {
+        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_attr_init: 0x%x", err);
+    }
+
+    // Manually setting the stack seems to avoid the crash. It ends up in the 0x90000000s.
+    size_t stack_size = 1024 * 1024;
+    void *thread_stack = malloc(stack_size);
+    __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Allocated %zu bytes for stack at %p", stack_size, thread_stack);
+    err = pthread_attr_setstack(&attr, thread_stack, stack_size);
+    if (err) {
+        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_attr_setstack: 0x%x", err);
+    }
+
     pthread_t thread;
-    int err = pthread_create(&thread, nullptr, render_thread, &shaders);
+    err = pthread_create(&thread, &attr, render_thread, &shaders);
     if (err) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_create: 0x%x", err);
+    }
+
+    err = pthread_attr_destroy(&attr);
+    if (err) {
+        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_attr_destroy: 0x%x", err);
     }
 
     err = pthread_join(thread, nullptr);
