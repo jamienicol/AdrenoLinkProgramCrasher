@@ -7,41 +7,9 @@
 #include <vector>
 #include <pthread.h>
 
-const size_t num_maps = 1000;
-const size_t map_len = 1024 * 1024;
-static std::vector<void*> maps;
-
 static EGLDisplay display = EGL_NO_DISPLAY;
 static EGLContext context = EGL_NO_CONTEXT;
 static EGLSurface surface = EGL_NO_SURFACE;
-
-void map_omnijar() {
-    maps.reserve(num_maps);
-    for (int i = 0; i < num_maps; i++) {
-        size_t map_len = 1024 * 1024;
-        __android_log_print(ANDROID_LOG_INFO, "JAMIE",
-                            "%d mmapping %zu bytes", i, map_len);
-        void *map = mmap(0, map_len, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-        if (map == MAP_FAILED) {
-            __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "mmap failed: %d\n",
-                                errno);
-            break;
-        } else {
-            __android_log_print(ANDROID_LOG_INFO, "JAMIE",
-                                "mmap succeeded: 0x%zx - 0x%zx\n", (size_t) map,
-                                (size_t) map + map_len);
-            maps.push_back(map);
-        }
-    }
-}
-
-void unmap_omnijar() {
-    for (int i = 0; i < maps.size(); i++) {
-        __android_log_print(ANDROID_LOG_INFO, "JAMIE",
-                            "%d munmapping %zu bytes", i, map_len);
-        munmap(maps[i], map_len);
-    }
-}
 
 void init_egl(int width, int height) {
     display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -139,7 +107,7 @@ struct Shader {
 std::vector<Shader> shaders;
 
 static void* render_thread(void* arg) {
-    __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Running Render thread. stack address: %p", __builtin_frame_address(0));
+    __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Running Render thread. frame address: %p", __builtin_frame_address(0));
 
     make_current();
 
@@ -169,58 +137,62 @@ Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_run_1native(JNIEnv *env, jobje
         });
     }
 
-    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Mapping omnijar");
-    map_omnijar();
-
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Initializing EGL Context");
     init_egl(1080, 1776);
 
-    // Unmapping here (before creating the render thread) prevents the crash.
-    // __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Unmapping omnijar");
-    // unmap_omnijar();
-
-    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Creating Render thread");
     pthread_attr_t attr;
     int err = pthread_attr_init(&attr);
     if (err) {
-        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_attr_init: 0x%x", err);
+      __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_attr_init: 0x%x", err);
     }
 
-    // Manually setting the stack seems to avoid the crash. It ends up in the 0x90000000s.
+    // Map 1MB for render thread stack at a specific address.
+    // 0x70000000 - 0x70100000 crashes.
+    // 0x80000000 - 0x80100000 does not crash
+    // 0x7ff00000 - 0x80000000 crashes
+    // 0x7ff80000 - 0x80080000 does not crash
+    // 0x7ff10000 - 0x80010000 does not crash
+    // 0x7ff01000 - 0x80001000 crashes
+    void* stack_addr = (void*)0x7ff01000;
     size_t stack_size = 1024 * 1024;
-    void* thread_stack = nullptr;
-    for (void* map: maps) {
-        // Find a suitable map for our stack.
-        // If it's in the 0x80000000s it's fine, but in the 0x70000000 we crash
-        if (map >= (void*)0x70000000 && map < (void*)0x80000000) {
-            thread_stack = map;
-            break;
-        }
+    __android_log_print(ANDROID_LOG_INFO, "JAMIE",
+                        "Mapping %zu bytes at %p for render thread stack", stack_size, stack_addr);
+    void* stack = mmap(stack_addr, stack_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+    if (stack == MAP_FAILED) {
+      __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "mmap failed: %d\n", errno);
+      return;
+    } else if (stack != stack_addr) {
+      __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "mmap %p not at specified address (requested %p)\n",
+                          stack, stack_addr);
+      return;
+    } else {
+      __android_log_print(ANDROID_LOG_INFO, "JAMIE",
+                          "mmap succeeded: 0x%zx - 0x%zx\n", (size_t)stack,
+                          (size_t)stack + stack_size);
     }
-    if (!thread_stack) {
-        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Didn't find suitable mapping for render thread stack");
-        return;
-    }
-    __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Allocated %zu bytes for stack at %p", stack_size, thread_stack);
-    err = pthread_attr_setstack(&attr, thread_stack, stack_size);
+
+    err = pthread_attr_setstack(&attr, stack, stack_size);
     if (err) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_attr_setstack: 0x%x", err);
+        return;
     }
 
+    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Creating Render thread");
     pthread_t thread;
     err = pthread_create(&thread, &attr, render_thread, &shaders);
     if (err) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_create: 0x%x", err);
-    }
-
-    err = pthread_attr_destroy(&attr);
-    if (err) {
-        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_attr_destroy: 0x%x", err);
+        return;
     }
 
     err = pthread_join(thread, nullptr);
     if (err) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_join: 0x%x", err);
+    }
+
+    err = pthread_attr_destroy(&attr);
+    if (err) {
+        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_attr_destroy: 0x%x", err);
     }
 
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Cleaning up JNI objects");
