@@ -21,7 +21,7 @@ void map_omnijar() {
         size_t map_len = 1024 * 1024;
         __android_log_print(ANDROID_LOG_INFO, "JAMIE",
                             "%d mmapping %zu bytes", i, map_len);
-        void *map = mmap(0, map_len, PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+        void *map = mmap(0, map_len, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
         if (map == MAP_FAILED) {
             __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "mmap failed: %d\n",
                                 errno);
@@ -188,7 +188,19 @@ Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_run_1native(JNIEnv *env, jobje
 
     // Manually setting the stack seems to avoid the crash. It ends up in the 0x90000000s.
     size_t stack_size = 1024 * 1024;
-    void *thread_stack = malloc(stack_size);
+    void* thread_stack = nullptr;
+    for (void* map: maps) {
+        // Find a suitable map for our stack.
+        // If it's in the 0x80000000s it's fine, but in the 0x70000000 we crash
+        if (map >= (void*)0x70000000 && map < (void*)0x80000000) {
+            thread_stack = map;
+            break;
+        }
+    }
+    if (!thread_stack) {
+        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Didn't find suitable mapping for render thread stack");
+        return;
+    }
     __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Allocated %zu bytes for stack at %p", stack_size, thread_stack);
     err = pthread_attr_setstack(&attr, thread_stack, stack_size);
     if (err) {
