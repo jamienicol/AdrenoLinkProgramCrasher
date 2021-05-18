@@ -17,8 +17,8 @@ class MainActivity : AppCompatActivity() {
         Log.i("JAMIE", "Loading shaders from resources")
         loadShaders()
 
-        val vertSources = shaders.values.map { it.first!! }.toTypedArray()
-        val fragSources = shaders.values.map { it.second!! }.toTypedArray()
+        val vertSources = shaderList.map { shaders[it]!!.first!! }.toTypedArray()
+        val fragSources = shaderList.map { shaders[it]!!.second!! }.toTypedArray()
 
         Gecko().run_native(shaderList, vertSources, fragSources)
     }
