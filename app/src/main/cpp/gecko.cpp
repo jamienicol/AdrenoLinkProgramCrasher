@@ -7,14 +7,18 @@
 #include <vector>
 #include <pthread.h>
 
-static EGLDisplay display = EGL_NO_DISPLAY;
-static EGLContext context = EGL_NO_CONTEXT;
-static EGLSurface surface = EGL_NO_SURFACE;
+struct Renderer {
+    EGLDisplay display = EGL_NO_DISPLAY;
+    EGLContext context = EGL_NO_CONTEXT;
+    EGLSurface surface = EGL_NO_SURFACE;
+    size_t first_shader = 0;
+    size_t last_shader = 0;
+};
 
-void init_egl(int width, int height) {
-    display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+void init_egl(Renderer* renderer, int width, int height) {
+    renderer->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
-    EGLBoolean success = eglInitialize(display, nullptr, nullptr);
+    EGLBoolean success = eglInitialize(renderer->display, nullptr, nullptr);
     if (!success) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "eglInitialize returned error: 0x%x",
                             eglGetError());
@@ -30,7 +34,7 @@ void init_egl(int width, int height) {
     };
     EGLConfig config;
     EGLint num_configs;
-    success = eglChooseConfig(display, attribs, &config, 1, &num_configs);
+    success = eglChooseConfig(renderer->display, attribs, &config, 1, &num_configs);
     if (!success) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "eglChooseConfig returned error: 0x%x",
                             eglGetError());
@@ -46,8 +50,8 @@ void init_egl(int width, int height) {
         EGL_CONTEXT_MINOR_VERSION, 0,
         EGL_NONE,
     };
-    context = eglCreateContext(display, config, EGL_NO_CONTEXT, context_attribs);
-    if (context == EGL_NO_CONTEXT) {
+    renderer->context = eglCreateContext(renderer->display, config, EGL_NO_CONTEXT, context_attribs);
+    if (renderer->context == EGL_NO_CONTEXT) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE",
                             "eglCreateContext returned error: 0x%x", eglGetError());
         return;
@@ -58,8 +62,8 @@ void init_egl(int width, int height) {
         EGL_HEIGHT, height,
         EGL_NONE
     };
-    surface = eglCreatePbufferSurface(display, config, surface_attribs);
-    if (surface == EGL_NO_SURFACE) {
+    renderer->surface = eglCreatePbufferSurface(renderer->display, config, surface_attribs);
+    if (renderer->surface == EGL_NO_SURFACE) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE",
                             "eglCreatePbufferSurface returned error: 0x%x", eglGetError());
         return;
@@ -68,9 +72,9 @@ void init_egl(int width, int height) {
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Successfully initialized EGL");
 }
 
-void make_current() {
+void make_current(Renderer* renderer) {
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "make_current()");
-    bool success = eglMakeCurrent(display, surface, surface, context);
+    bool success = eglMakeCurrent(renderer->display, renderer->surface, renderer->surface, renderer->context);
     if (!success) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE",
                             "eglMakeCurrent returned error: 0x%x", eglGetError());
@@ -78,8 +82,8 @@ void make_current() {
     }
 }
 
-void compile_shader(const char* name, const char* vert_src, const char* frag_src) {
-    __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Compiling shader %s", name);
+void compile_shader(size_t index, const char* name, const char* vert_src, const char* frag_src) {
+  __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Compiling shader %zu %s", index, name);
 
     GLuint prog = glCreateProgram();
 
@@ -94,7 +98,7 @@ void compile_shader(const char* name, const char* vert_src, const char* frag_src
     glAttachShader(prog, vert);
     glAttachShader(prog, frag);
 
-    __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Linking shader %s", name);
+    __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Linking shader %zu %s", index, name);
 
     glLinkProgram(prog);
 }
@@ -109,52 +113,26 @@ std::vector<Shader> shaders;
 static void* render_thread(void* arg) {
     __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Running Render thread. frame address: %p", __builtin_frame_address(0));
 
-    make_current();
+    Renderer* renderer = (Renderer*)arg;
+
+    make_current(renderer);
 
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Compiling shaders");
-    for (const auto& shader: shaders) {
-        compile_shader(shader.name, shader.vert_src, shader.frag_src);
+    for (size_t i = renderer->first_shader; i < renderer->last_shader; i++) {
+        compile_shader(i, shaders[i].name, shaders[i].vert_src, shaders[i].frag_src);
     }
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Finished compiling shaders");
 
     return nullptr;
 }
 
-extern "C"
-JNIEXPORT void JNICALL
-Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_run_1native(JNIEnv *env, jobject thiz, jobjectArray shaderNames, jobjectArray vertSources, jobjectArray fragSources) {
-
-    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Copying objects from JNI");
-
-    jsize num_shaders = env->GetArrayLength(shaderNames);
-
-    shaders.reserve(num_shaders);
-    for (int i = 0; i < num_shaders; i++) {
-        shaders.push_back(Shader {
-            env->GetStringUTFChars((jstring)env->GetObjectArrayElement(shaderNames, i), 0),
-            env->GetStringUTFChars((jstring)env->GetObjectArrayElement(vertSources, i), 0),
-            env->GetStringUTFChars((jstring)env->GetObjectArrayElement(fragSources, i), 0),
-        });
-    }
-
-    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Initializing EGL Context");
-    init_egl(1080, 1776);
-
+void create_thread(pthread_t* thread, void* stack_addr, size_t stack_size, void* (fun)(void*), void* arg) {
     pthread_attr_t attr;
     int err = pthread_attr_init(&attr);
     if (err) {
       __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_attr_init: 0x%x", err);
     }
 
-    // Map 1MB for render thread stack at a specific address.
-    // 0x70000000 - 0x70100000 crashes.
-    // 0x80000000 - 0x80100000 does not crash
-    // 0x7ff00000 - 0x80000000 crashes
-    // 0x7ff80000 - 0x80080000 does not crash
-    // 0x7ff10000 - 0x80010000 does not crash
-    // 0x7ff01000 - 0x80001000 crashes
-    void* stack_addr = (void*)0x7ff01000;
-    size_t stack_size = 1024 * 1024;
     __android_log_print(ANDROID_LOG_INFO, "JAMIE",
                         "Mapping %zu bytes at %p for render thread stack", stack_size, stack_addr);
     void* stack = mmap(stack_addr, stack_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
@@ -178,21 +156,58 @@ Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_run_1native(JNIEnv *env, jobje
     }
 
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Creating Render thread");
-    pthread_t thread;
-    err = pthread_create(&thread, &attr, render_thread, &shaders);
+    err = pthread_create(thread, &attr, fun, arg);
     if (err) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_create: 0x%x", err);
         return;
     }
 
-    err = pthread_join(thread, nullptr);
-    if (err) {
-        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_join: 0x%x", err);
-    }
-
     err = pthread_attr_destroy(&attr);
     if (err) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_attr_destroy: 0x%x", err);
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_run_1native(JNIEnv *env, jobject thiz, jobjectArray shaderNames, jobjectArray vertSources, jobjectArray fragSources) {
+
+    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Copying objects from JNI");
+
+    jsize num_shaders = env->GetArrayLength(shaderNames);
+
+    shaders.reserve(num_shaders);
+    for (int i = 0; i < num_shaders; i++) {
+        shaders.push_back(Shader {
+            env->GetStringUTFChars((jstring)env->GetObjectArrayElement(shaderNames, i), 0),
+            env->GetStringUTFChars((jstring)env->GetObjectArrayElement(vertSources, i), 0),
+            env->GetStringUTFChars((jstring)env->GetObjectArrayElement(fragSources, i), 0),
+        });
+    }
+
+    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Initializing EGL Contexts");
+    Renderer renderer1, renderer2;
+
+    renderer1.first_shader = 0;
+    renderer1.last_shader = shaders.size() / 2;
+    renderer2.first_shader = shaders.size() / 2;
+    renderer2.last_shader = shaders.size();
+
+    init_egl(&renderer1, 1080, 1776);
+    init_egl(&renderer2, 1080, 1776);
+
+    // Both threads stack being >= 0x80000000 avoids the crash. Either or both of them < 0x80000000 crashes.
+    pthread_t thread1, thread2;
+    create_thread(&thread1, (void *)0x80000000, 1024 * 1024, render_thread, &renderer1);
+    create_thread(&thread2, (void *)0x70000000, 1024 * 1024, render_thread, &renderer2);
+
+    int err = pthread_join(thread1, nullptr);
+    if (err) {
+        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_join 1: 0x%x", err);
+    }
+    err = pthread_join(thread2, nullptr);
+    if (err) {
+        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_join 2: 0x%x", err);
     }
 
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Cleaning up JNI objects");
