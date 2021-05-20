@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.util.Pair
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.UUID;
 
 class MainActivity : AppCompatActivity() {
     private var shaders = HashMap<String, Pair<String, String>>()
@@ -44,6 +45,10 @@ class MainActivity : AppCompatActivity() {
                     fragBuilder.append('\n')
                 }
                 fragReader.close()
+
+                vertBuilder.append("// ${UUID.randomUUID().toString()}\n")
+                fragBuilder.append("// ${UUID.randomUUID().toString()}\n")
+
                 shaders[asset.replace(".vert", "")] = Pair.create(
                     vertBuilder.toString(),
                     fragBuilder.toString()
