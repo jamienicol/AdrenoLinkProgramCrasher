@@ -6,6 +6,7 @@
 #include <GLES2/gl2.h>
 #include <vector>
 #include <pthread.h>
+#include <stdlib.h>
 
 struct Renderer {
     EGLDisplay display = EGL_NO_DISPLAY;
@@ -22,7 +23,7 @@ void init_egl(Renderer* renderer, int width, int height) {
     if (!success) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "eglInitialize returned error: 0x%x",
                             eglGetError());
-        return;
+        abort();
     }
 
     const EGLint attribs[] = {
@@ -38,11 +39,11 @@ void init_egl(Renderer* renderer, int width, int height) {
     if (!success) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "eglChooseConfig returned error: 0x%x",
                             eglGetError());
-        return;
+        abort();
     }
     if (num_configs == 0) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "eglChooseConfig returned 0 configs");
-        return;
+        abort();
     }
 
     const EGLint context_attribs[] = {
@@ -54,7 +55,7 @@ void init_egl(Renderer* renderer, int width, int height) {
     if (renderer->context == EGL_NO_CONTEXT) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE",
                             "eglCreateContext returned error: 0x%x", eglGetError());
-        return;
+        abort();
     }
 
     EGLint surface_attribs[] = {
@@ -66,7 +67,7 @@ void init_egl(Renderer* renderer, int width, int height) {
     if (renderer->surface == EGL_NO_SURFACE) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE",
                             "eglCreatePbufferSurface returned error: 0x%x", eglGetError());
-        return;
+        abort();
     }
 
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Successfully initialized EGL");
@@ -78,7 +79,7 @@ void make_current(Renderer* renderer) {
     if (!success) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE",
                             "eglMakeCurrent returned error: 0x%x", eglGetError());
-        return;
+        abort();
     }
 }
 
@@ -138,11 +139,11 @@ void create_thread(pthread_t* thread, void* stack_addr, size_t stack_size, void*
     void* stack = mmap(stack_addr, stack_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
     if (stack == MAP_FAILED) {
       __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "mmap failed: %d\n", errno);
-      return;
+      abort();
     } else if (stack != stack_addr) {
       __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "mmap %p not at specified address (requested %p)\n",
                           stack, stack_addr);
-      return;
+      abort();
     } else {
       __android_log_print(ANDROID_LOG_INFO, "JAMIE",
                           "mmap succeeded: 0x%zx - 0x%zx\n", (size_t)stack,
@@ -152,14 +153,14 @@ void create_thread(pthread_t* thread, void* stack_addr, size_t stack_size, void*
     err = pthread_attr_setstack(&attr, stack, stack_size);
     if (err) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_attr_setstack: 0x%x", err);
-        return;
+        abort();
     }
 
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Creating Render thread");
     err = pthread_create(thread, &attr, fun, arg);
     if (err) {
         __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_create: 0x%x", err);
-        return;
+        abort();
     }
 
     err = pthread_attr_destroy(&attr);
