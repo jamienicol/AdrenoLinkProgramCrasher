@@ -16,6 +16,13 @@ struct Renderer {
     size_t last_shader = 0;
 };
 
+struct Shader {
+    const char* name;
+    const char* vert_src;
+    const char* frag_src;
+};
+std::vector<Shader> shaders;
+
 void init_egl(Renderer* renderer, int width, int height) {
     renderer->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
@@ -84,7 +91,8 @@ void make_current(Renderer* renderer) {
 }
 
 void compile_shader(size_t index, const char* name, const char* vert_src, const char* frag_src) {
-  __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Compiling shader %zu %s", index, name);
+
+    __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Compiling shader %zu %s", index, name);
 
     GLuint prog = glCreateProgram();
 
@@ -104,14 +112,7 @@ void compile_shader(size_t index, const char* name, const char* vert_src, const 
     glLinkProgram(prog);
 }
 
-struct Shader {
-    const char* name;
-    const char* vert_src;
-    const char* frag_src;
-};
-std::vector<Shader> shaders;
-
-static void* render_thread(void* arg) {
+void* render_thread(void* arg) {
     __android_log_print(ANDROID_LOG_INFO, "JAMIE", "Running Render thread. frame address: %p", __builtin_frame_address(0));
 
     Renderer* renderer = (Renderer*)arg;
@@ -186,29 +187,48 @@ Java_me_jamienicol_adrenolinkprogramcrasher_Gecko_run_1native(JNIEnv *env, jobje
         });
     }
 
-    __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Initializing EGL Contexts");
-    Renderer renderer1, renderer2;
+    bool multithread = false;
+    if (multithread) {
+        __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Initializing EGL Contexts");
+        Renderer renderer1, renderer2;
 
-    renderer1.first_shader = 0;
-    renderer1.last_shader = shaders.size() / 2;
-    renderer2.first_shader = shaders.size() / 2;
-    renderer2.last_shader = shaders.size();
+        renderer1.first_shader = 0;
+        renderer1.last_shader = shaders.size() / 2;
+        renderer2.first_shader = shaders.size() / 2;
+        renderer2.last_shader = shaders.size();
 
-    init_egl(&renderer1, 1080, 1776);
-    init_egl(&renderer2, 1080, 1776);
+        init_egl(&renderer1, 1080, 1776);
+        init_egl(&renderer2, 1080, 1776);
 
-    // Both threads stack being >= 0x80000000 avoids the crash. Either or both of them < 0x80000000 crashes.
-    pthread_t thread1, thread2;
-    create_thread(&thread1, (void *)0x80000000, 1024 * 1024, render_thread, &renderer1);
-    create_thread(&thread2, (void *)0x70000000, 1024 * 1024, render_thread, &renderer2);
+        // Both threads stack being >= 0x80000000 avoids the crash. Either or both of them < 0x80000000 crashes.
+        pthread_t thread1, thread2;
+        create_thread(&thread1, (void *) 0x80000000, 1024 * 1024, render_thread, &renderer1);
+        create_thread(&thread2, (void *) 0x70000000, 1024 * 1024, render_thread, &renderer2);
 
-    int err = pthread_join(thread1, nullptr);
-    if (err) {
-        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_join 1: 0x%x", err);
-    }
-    err = pthread_join(thread2, nullptr);
-    if (err) {
-        __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_join 2: 0x%x", err);
+        int err = pthread_join(thread1, nullptr);
+        if (err) {
+            __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_join 1: 0x%x", err);
+        }
+        err = pthread_join(thread2, nullptr);
+        if (err) {
+            __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_join 2: 0x%x", err);
+        }
+    } else {
+        Renderer renderer;
+
+        renderer.first_shader = 0;
+        renderer.last_shader = shaders.size();
+
+        init_egl(&renderer, 1080, 1776);
+
+        // Thread stack being >= 0x80000000 avoids the crash, < 0x80000000 crashes.
+        pthread_t thread1;
+        create_thread(&thread1, (void *) 0x70000000, 1024 * 1024, render_thread, &renderer);
+
+        int err = pthread_join(thread1, nullptr);
+        if (err) {
+            __android_log_print(ANDROID_LOG_ERROR, "JAMIE", "Error in pthread_join: 0x%x", err);
+        }
     }
 
     __android_log_write(ANDROID_LOG_INFO, "JAMIE", "Cleaning up JNI objects");
