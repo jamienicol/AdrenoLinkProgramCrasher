@@ -99,7 +99,10 @@ void main ()
     vec2 result_p1_28;
     result_p1_28 = (tmpvar_6.xy + tmpvar_6.zw);
     bvec4 tmpvar_29;
-    tmpvar_29 = notEqual ((tmpvar_21 & ivec4(1, 2, 4, 8)), ivec4(0, 0, 0, 0));
+    tmpvar_29.x = bool((tmpvar_21 & 1));
+    tmpvar_29.y = bool((tmpvar_21 & 2));
+    tmpvar_29.z = bool((tmpvar_21 & 4));
+    tmpvar_29.w = bool((tmpvar_21 & 8));
     vec4 tmpvar_30;
     tmpvar_30.xy = min (max (tmpvar_5.xy, tmpvar_6.xy), result_p1_28);
     tmpvar_30.zw = min (max ((tmpvar_5.xy + tmpvar_5.zw), tmpvar_6.xy), result_p1_28);
