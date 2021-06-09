@@ -155,7 +155,7 @@ void main ()
     vec2 result_p1_42;
     result_p1_42 = (tmpvar_9.xy + tmpvar_9.zw);
     bvec4 tmpvar_43;
-    tmpvar_43 = notEqual ((tmpvar_33 & ivec4(1, 2, 4, 8)), ivec4(0, 0, 0, 0));
+    tmpvar_43 = bvec4(false);
     vec4 tmpvar_44;
     tmpvar_44.xy = min (max (tmpvar_8.xy, tmpvar_9.xy), result_p1_42);
     tmpvar_44.zw = min (max ((tmpvar_8.xy + tmpvar_8.zw), tmpvar_9.xy), result_p1_42);
