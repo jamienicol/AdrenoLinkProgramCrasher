@@ -58,7 +58,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     val shaderList = arrayOf(
-        "brush_image_DEBUG_OVERDRAW_TEXTURE_2D_Gles",
         "brush_solid_DEBUG_OVERDRAW_Gles",
+        "brush_image_DEBUG_OVERDRAW_TEXTURE_2D_Gles",
     )
 }
