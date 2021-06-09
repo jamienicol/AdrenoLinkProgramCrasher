@@ -29,12 +29,14 @@ void main ()
   v_offset_scale = tmpvar_2;
   vec4 tmpvar_3;
   tmpvar_3.zw = vec2(0.0, 1.0);
-  tmpvar_3.xy = (aTaskRect.xy + (aTaskRect.zw * aPosition));
+  tmpvar_3.xy = mix (aTaskRect.xy, aTaskRect.zw, aPosition);
   gl_Position = (uTransform * tmpvar_3);
   v_angle = (1.570796 - aAngle);
   v_start_offset = (aStartOffset * tmpvar_2);
   v_center = (aCenter * tmpvar_2);
-  v_pos = (((aTaskRect.zw * aPosition) * tmpvar_2) * aScale);
+  v_pos = (((
+    (aTaskRect.zw - aTaskRect.xy)
+   * aPosition) * tmpvar_2) * aScale);
   v_gradient_repeat = float((aExtendMode == 1));
   v_gradient_address = aGradientStopsAddress;
 }

@@ -26,10 +26,8 @@ void main ()
   highp int yuv_format_2;
   highp vec2 uv_3;
   vec2 tmpvar_4;
-  tmpvar_4 = min (max ((aDeviceRect.xy + 
-    (aPosition * aDeviceRect.zw)
-  ), aDeviceClipRect.xy), (aDeviceClipRect.xy + aDeviceClipRect.zw));
-  uv_3 = ((tmpvar_4 - aDeviceRect.xy) / aDeviceRect.zw);
+  tmpvar_4 = min (max (mix (aDeviceRect.xy, aDeviceRect.zw, aPosition), aDeviceClipRect.xy), aDeviceClipRect.zw);
+  uv_3 = ((tmpvar_4 - aDeviceRect.xy) / (aDeviceRect.zw - aDeviceRect.xy));
   int tmpvar_5;
   tmpvar_5 = int(aParams.y);
   yuv_format_2 = int(aParams.z);

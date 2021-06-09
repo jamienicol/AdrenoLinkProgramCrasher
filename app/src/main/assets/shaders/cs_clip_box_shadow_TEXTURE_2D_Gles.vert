@@ -62,7 +62,7 @@ void main ()
   highp vec4 pos_12;
   vec4 tmpvar_13;
   tmpvar_13.zw = vec2(0.0, 1.0);
-  tmpvar_13.xy = (((aClipOrigins.zw + aClipDeviceArea.xy) + (aPosition * aClipDeviceArea.zw)) / aDevicePixelScale);
+  tmpvar_13.xy = ((aClipOrigins.zw + mix (aClipDeviceArea.xy, aClipDeviceArea.zw, aPosition)) / aDevicePixelScale);
   vec4 tmpvar_14;
   tmpvar_14 = (transform_m_5 * tmpvar_13);
   pos_12.w = tmpvar_14.w;
@@ -110,7 +110,7 @@ void main ()
   tmpvar_28 = ((transform_inv_m_2 * tmpvar_27) * tmpvar_14.w);
   vec4 tmpvar_29;
   tmpvar_29.zw = vec2(0.0, 1.0);
-  tmpvar_29.xy = ((aClipOrigins.xy + aClipDeviceArea.xy) + (aPosition * aClipDeviceArea.zw));
+  tmpvar_29.xy = (aClipOrigins.xy + mix (aClipDeviceArea.xy, aClipDeviceArea.zw, aPosition));
   gl_Position = (uTransform * tmpvar_29);
   vec4 tmpvar_30;
   tmpvar_30.xy = tmpvar_8;

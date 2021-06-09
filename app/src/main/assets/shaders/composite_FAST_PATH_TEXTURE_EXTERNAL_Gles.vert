@@ -13,11 +13,9 @@ void main ()
   highp vec4 uvBounds_1;
   highp vec2 uv_2;
   vec2 tmpvar_3;
-  tmpvar_3 = min (max ((aDeviceRect.xy + 
-    (aPosition * aDeviceRect.zw)
-  ), aDeviceClipRect.xy), (aDeviceClipRect.xy + aDeviceClipRect.zw));
+  tmpvar_3 = min (max (mix (aDeviceRect.xy, aDeviceRect.zw, aPosition), aDeviceClipRect.xy), aDeviceClipRect.zw);
   vec2 tmpvar_4;
-  tmpvar_4 = mix (aUvRect0.xy, aUvRect0.zw, ((tmpvar_3 - aDeviceRect.xy) / aDeviceRect.zw));
+  tmpvar_4 = mix (aUvRect0.xy, aUvRect0.zw, ((tmpvar_3 - aDeviceRect.xy) / (aDeviceRect.zw - aDeviceRect.xy)));
   uv_2 = tmpvar_4;
   vec4 tmpvar_5;
   tmpvar_5.x = aUvRect0.x;

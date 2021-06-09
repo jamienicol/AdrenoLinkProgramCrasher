@@ -62,7 +62,7 @@ void main ()
   vLocalPos = (mix (aPosition, aPosition.yx, aAxisSelect) * tmpvar_1);
   vec4 tmpvar_8;
   tmpvar_8.zw = vec2(0.0, 1.0);
-  tmpvar_8.xy = (aTaskRect.xy + (aTaskRect.zw * aPosition));
+  tmpvar_8.xy = mix (aTaskRect.xy, aTaskRect.zw, aPosition);
   gl_Position = (uTransform * tmpvar_8);
 }
 

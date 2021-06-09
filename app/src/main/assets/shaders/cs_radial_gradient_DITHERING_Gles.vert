@@ -7,6 +7,7 @@ out highp vec2 v_pos;
 flat out highp float v_start_radius;
 in highp vec4 aTaskRect;
 in highp vec2 aCenter;
+in highp vec2 aScale;
 in highp float aStartRadius;
 in highp float aEndRadius;
 in highp float aXYRatio;
@@ -24,10 +25,12 @@ void main ()
   };
   vec4 tmpvar_3;
   tmpvar_3.zw = vec2(0.0, 1.0);
-  tmpvar_3.xy = (aTaskRect.xy + (aTaskRect.zw * aPosition));
+  tmpvar_3.xy = mix (aTaskRect.xy, aTaskRect.zw, aPosition);
   gl_Position = (uTransform * tmpvar_3);
   v_start_radius = (aStartRadius * tmpvar_2);
-  v_pos = (((aTaskRect.zw * aPosition) - aCenter) * tmpvar_2);
+  v_pos = (((
+    ((aTaskRect.zw - aTaskRect.xy) * aPosition)
+   * aScale) - aCenter) * tmpvar_2);
   v_pos.y = (v_pos.y * aXYRatio);
   v_gradient_repeat = float((aExtendMode == 1));
   v_gradient_address = aGradientStopsAddress;

@@ -150,7 +150,7 @@ void main ()
     vec2 result_p1_39;
     result_p1_39 = (tmpvar_8.xy + tmpvar_8.zw);
     bvec4 tmpvar_40;
-    tmpvar_40 = bvec4(false);
+    tmpvar_40 = notEqual ((tmpvar_31 & ivec4(1, 2, 4, 8)), ivec4(0, 0, 0, 0));
     vec4 tmpvar_41;
     tmpvar_41.xy = min (max (tmpvar_7.xy, tmpvar_8.xy), result_p1_39);
     tmpvar_41.zw = min (max ((tmpvar_7.xy + tmpvar_7.zw), tmpvar_8.xy), result_p1_39);
@@ -217,7 +217,7 @@ void main ()
   };
   vYuvOffsetVector_Coefficient.xyz = tmpvar_55;
   vFormat = prim_yuv_format_49;
-  if ((prim_yuv_format_49 == 1)) {
+  if (((prim_yuv_format_49 == 1) || (prim_yuv_format_49 == 99))) {
     ivec2 tmpvar_56;
     tmpvar_56.x = int((uint(tmpvar_13.x) % 1024u));
     tmpvar_56.y = int((uint(tmpvar_13.x) / 1024u));
